@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0f7a4a">
 <link rel="manifest" href="manifest.json">
-<link rel="icon" href="icons/icon-192.png">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Attendance">
@@ -34,9 +34,29 @@ button.add{background:transparent;color:var(--acc);border:1px dashed var(--acc)}
 pre{white-space:pre-wrap;word-break:break-word;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px;font:14px/1.5 inherit;margin:0 0 10px}
 .wa{display:block;text-align:center;text-decoration:none;background:#25d366;color:#06301a;font-weight:700;border-radius:10px;padding:12px;margin-top:8px}
 .sum{color:var(--mut);font-size:14px;margin-top:8px}
+button{transition:transform .12s ease,opacity .12s ease}
+button:active,.wa:active{transform:scale(.97)}
+#splash{position:fixed;inset:0;z-index:100;background:var(--acc);color:var(--accink);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;animation:splashOut .55s ease 1.15s forwards}
+#splash svg{width:84px;height:84px;animation:logoIn .7s cubic-bezier(.2,1.3,.4,1) both}
+#splash .tt{font-size:20px;font-weight:700;letter-spacing:.3px;animation:rise .6s ease .35s both}
+#splash .st{font-size:13px;opacity:.85;animation:rise .6s ease .5s both}
+#splash .ck{stroke-dasharray:60;stroke-dashoffset:60;animation:draw .5s ease .6s forwards}
+main{animation:rise .6s ease 1.05s both}
+#list .card,#rlist .card{animation:pop .28s ease both}
+@keyframes splashOut{to{opacity:0;visibility:hidden}}
+@keyframes logoIn{from{opacity:0;transform:scale(.4) rotate(-12deg)}to{opacity:1;transform:none}}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes draw{to{stroke-dashoffset:0}}
+@keyframes pop{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){#splash{animation:splashOut .01s ease .3s forwards}#splash *,main,#list .card,#rlist .card{animation:none!important}#splash .ck{stroke-dashoffset:0}main{opacity:1}}
 </style>
 </head>
 <body>
+<div id="splash" aria-hidden="true">
+  <svg viewBox="0 0 96 96" fill="none"><rect x="20" y="14" width="56" height="74" rx="9" fill="currentColor"/><rect x="35" y="6" width="26" height="16" rx="5" fill="currentColor" stroke="var(--acc)" stroke-width="3"/><path class="ck" d="M33 54l11 11 20-24" stroke="var(--acc)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <div class="tt">Staff Attendance</div>
+  <div class="st">Daily report ready in seconds</div>
+</div>
 <main>
 <h1>Daily Staff Attendance</h1>
 

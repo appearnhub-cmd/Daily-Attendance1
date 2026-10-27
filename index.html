@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f7a4a">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Attendance">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>Staff Attendance Generator</title>
+<style>
+:root{--bg:#f3f7f4;--card:#fff;--ink:#14261c;--mut:#5d6f64;--line:#d5e0d9;--acc:#0f7a4a;--accink:#fff;--red:#b3261e;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1a14;--card:#172620;--ink:#e8f1ec;--mut:#9bb0a4;--line:#2a3d33;--acc:#3fc888;--accink:#06231a;--red:#ff8a80}}
+:root[data-theme="dark"]{--bg:#0f1a14;--card:#172620;--ink:#e8f1ec;--mut:#9bb0a4;--line:#2a3d33;--acc:#3fc888;--accink:#06231a;--red:#ff8a80}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 "Segoe UI",system-ui,-apple-system,sans-serif}
+main{max-width:520px;margin:0 auto;padding:16px}
+h1{font-size:20px;margin:0 0 12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+label{display:block;font-size:13px;color:var(--mut);margin:8px 0 3px}
+input,select{width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+.row{display:flex;gap:10px}.row>*{flex:1}
+button{font:inherit;border:0;border-radius:10px;padding:12px;cursor:pointer;background:var(--acc);color:var(--accink);font-weight:600;width:100%}
+button.ghost{background:transparent;color:var(--red);border:1px solid var(--line);width:auto;padding:6px 10px;font-weight:500}
+button.add{background:transparent;color:var(--acc);border:1px dashed var(--acc)}
+.h{display:flex;justify-content:space-between;align-items:center}
+.h b{color:var(--red)}
+pre{white-space:pre-wrap;word-break:break-word;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px;font:14px/1.5 inherit;margin:0 0 10px}
+.wa{display:block;text-align:center;text-decoration:none;background:#25d366;color:#06301a;font-weight:700;border-radius:10px;padding:12px;margin-top:8px}
+.sum{color:var(--mut);font-size:14px;margin-top:8px}
+</style>
+</head>
+<body>
+<main>
+<h1>Daily Staff Attendance</h1>
+
+<div class="card">
+  <label>School name (tap and change anytime)</label>
+  <input id="school" placeholder="Apne school ka naam likhein">
+  <div class="row">
+    <div><label>Date (auto)</label><input id="date" readonly></div>
+    <div><label>Total staff</label><input id="total" type="number" inputmode="numeric" placeholder="e.g. 8"></div>
+  </div>
+  <div class="sum" id="sum"></div>
+</div>
+
+<div id="list"></div>
+<button class="add" id="add">+ Add absent staff</button>
+
+<div class="card" style="margin-top:12px">
+  <pre id="out"></pre>
+  <button id="copy">Copy for WhatsApp</button>
+  <a class="wa" id="wa" target="_blank" rel="noopener" href="#">Send on WhatsApp</a>
+</div>
+<h1 style="margin-top:28px">Reliever Update</h1>
+<div id="rlist"></div>
+<button class="add" id="radd">+ Add reliever</button>
+<div class="card" style="margin-top:12px">
+  <pre id="rout"></pre>
+  <button id="rcopy">Copy reliever message</button>
+  <a class="wa" id="rwa" target="_blank" rel="noopener" href="#">Send on WhatsApp</a>
+</div>
+</main>
+
+<script>
+var absent=[];
+var rel=[];
+var $=function(i){return document.getElementById(i)};
+function setDate(){
+  var d=new Date();
+  var v=('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+d.getFullYear();
+  if($('date').value!==v){$('date').value=v;try{build();buildRel()}catch(e){}}
+}
+setDate();
+setInterval(setDate,30000);
+document.addEventListener('visibilitychange',setDate);
+window.addEventListener('focus',setDate);
+function sn(){return $('school').value.trim()||'SCHOOL NAME'}
+function p2(n){return n<10?'0'+n:''+n}
+
+function renderList(){
+  var h='';
+  absent.forEach(function(a,i){
+    h+='<div class="card"><div class="h"><b>Absent #'+(i+1)+'</b><button class="ghost" data-del="'+i+'">Remove</button></div>'
+    +'<label>Name</label><input data-i="'+i+'" data-k="name" value="'+esc(a.name)+'">'
+    +'<div class="row"><div><label>Staff ID</label><input data-i="'+i+'" data-k="id" value="'+esc(a.id)+'"></div>'
+    +'<div><label>Contact number</label><input data-i="'+i+'" data-k="phone" inputmode="tel" value="'+esc(a.phone)+'"></div></div>'
+    +'<label>Reason</label><select data-i="'+i+'" data-k="reason">'+opts(['Sick','Emergency','Other'],a.reason)+'</select>'
+    +'<div class="row"><div><label>Team leader informed</label><select data-i="'+i+'" data-k="tl">'+opts(['Yes','No'],a.tl)+'</select></div>'
+    +'<div><label>Status</label><select data-i="'+i+'" data-k="status">'+opts(['Informed','Without Information'],a.status)+'</select></div></div></div>';
+  });
+  $('list').innerHTML=h;
+}
+function opts(arr,v){return arr.map(function(o){return '<option'+(o===v?' selected':'')+'>'+o+'</option>'}).join('')}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')}
+
+function build(){
+  var t=parseInt($('total').value)||0, n=absent.length, pr=Math.max(t-n,0);
+  $('sum').textContent='Present: '+p2(pr)+'  |  Absent: '+p2(n);
+  var s='🌞 *GOOD MORNING* 🌞\n🌙 Assalamualaikum 🌙\n\n🏫 *'+sn()+'*\n📅 Date: '+$('date').value
+  +'\n\n━━━━━━━━━━━━━━━\n👥 *DAILY STAFF ATTENDANCE*\n━━━━━━━━━━━━━━━\n\n📊 Total Staff: '+p2(t)+'\n🟢 Present: '+p2(pr)+'\n🔴 Absent: '+p2(n)+'\n';
+  if(n===0){s+='\n✅ *All staff are present today*\n';}
+  else{
+    s+='\n━━━━━━━━━━━━━━━\n🔴 *ABSENT DETAILS*\n━━━━━━━━━━━━━━━\n';
+    var nums=['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣'];
+    absent.forEach(function(a,i){
+      s+='\n'+(nums[i]||(i+1)+'.')+' Name: '+a.name+'\n🆔 Staff ID: '+a.id+'\n📞 Contact: '+a.phone+'\n📝 Reason: '+a.reason+'\n📢 Team Leader Informed: '+a.tl+'\n📌 Status: '+a.status+'\n';
+    });
+  }
+  s+='\n🙏 *Thank You* 🙏';
+  $('out').textContent=s;
+  $('wa').href='https://wa.me/?text='+encodeURIComponent(s);
+}
+
+$('add').onclick=function(){absent.push({name:'',id:'',phone:'',reason:'Sick',tl:'Yes',status:'Informed'});renderList();build()};
+$('list').addEventListener('input',function(e){var i=e.target.dataset.i;if(i!==undefined){absent[i][e.target.dataset.k]=e.target.value;build()}});
+$('list').addEventListener('click',function(e){var x=e.target.dataset.del;if(x!==undefined){absent.splice(+x,1);renderList();build()}});
+['school','date','total'].forEach(function(i){$(i).addEventListener('input',build)});
+$('copy').onclick=function(){
+  var t=$('out').textContent,b=$('copy');
+  function ok(){b.textContent='Copied ✔';setTimeout(function(){b.textContent='Copy for WhatsApp'},1500)}
+  try{navigator.clipboard.writeText(t).then(ok,fb)}catch(e){fb()}
+  function fb(){var r=document.createRange();r.selectNodeContents($('out'));var s=getSelection();s.removeAllRanges();s.addRange(r);try{document.execCommand('copy');ok()}catch(e){b.textContent='Select text & copy manually'}}
+};
+function renderRel(){
+  var h='';
+  rel.forEach(function(a,i){
+    h+='<div class="card"><div class="h"><b>Reliever #'+(i+1)+'</b><button class="ghost" data-rdel="'+i+'">Remove</button></div>'
+    +'<label>Reliever name</label><input data-ri="'+i+'" data-k="name" value="'+esc(a.name)+'">'
+    +'<div class="row"><div><label>Reliever ID</label><input data-ri="'+i+'" data-k="id" value="'+esc(a.id)+'"></div>'
+    +'<div><label>In place of (absent staff)</label><input data-ri="'+i+'" data-k="for" value="'+esc(a.for)+'"></div></div></div>';
+  });
+  $('rlist').innerHTML=h;
+}
+function buildRel(){
+  if(!rel.length){$('rout').textContent='Reliever add karein, short message yahan banega.';$('rwa').style.display='none';return}
+  $('rwa').style.display='block';
+  var nums=['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣'];
+  var s='🔄 *RELIEVER UPDATE*\n🏫 '+sn()+'\n📅 '+$('date').value+'\n';
+  rel.forEach(function(a,i){
+    s+='\n'+(nums[i]||(i+1)+'.')+' '+a.name+' | 🆔 '+a.id+(a.for?'\n    ↪️ In place of: '+a.for:'')+'\n';
+  });
+  s+='\n✅ Total Reliever: '+p2(rel.length)+'\n🙏 *Thank You* 🙏';
+  $('rout').textContent=s;
+  $('rwa').href='https://wa.me/?text='+encodeURIComponent(s);
+}
+$('radd').onclick=function(){rel.push({name:'',id:'',for:''});renderRel();buildRel()};
+$('rlist').addEventListener('input',function(e){var i=e.target.dataset.ri;if(i!==undefined){rel[i][e.target.dataset.k]=e.target.value;buildRel()}});
+$('rlist').addEventListener('click',function(e){var x=e.target.dataset.rdel;if(x!==undefined){rel.splice(+x,1);renderRel();buildRel()}});
+['school','date'].forEach(function(i){$(i).addEventListener('input',buildRel)});
+$('rcopy').onclick=function(){
+  if(!rel.length)return;
+  var t=$('rout').textContent,b=$('rcopy');
+  function ok(){b.textContent='Copied ✔';setTimeout(function(){b.textContent='Copy reliever message'},1500)}
+  try{navigator.clipboard.writeText(t).then(ok,fb)}catch(e){fb()}
+  function fb(){var r=document.createRange();r.selectNodeContents($('rout'));var s=getSelection();s.removeAllRanges();s.addRange(r);try{document.execCommand('copy');ok()}catch(e){b.textContent='Select text & copy manually'}}
+};
+try{var sv=localStorage.getItem('school');if(sv)$('school').value=sv}catch(e){}
+$('school').addEventListener('input',function(){try{localStorage.setItem('school',$('school').value)}catch(e){}});
+try{var st=localStorage.getItem('total');if(st)$('total').value=st}catch(e){}
+$('total').addEventListener('input',function(){try{localStorage.setItem('total',$('total').value)}catch(e){}});
+build();
+buildRel();
+</script>
+<script>
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})})}
+</script>
+</body>
+</html>
